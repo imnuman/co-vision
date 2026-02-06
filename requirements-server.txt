@@ -1,0 +1,32 @@
+# CoVision Server Requirements
+
+# Web server
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+websockets>=12.0
+python-multipart>=0.0.6
+
+# Core dependencies
+opencv-python>=4.8.0
+numpy>=1.24.0
+pillow>=10.0.0
+pyyaml>=6.0
+
+# ML frameworks
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Vision models
+ultralytics>=8.3.0
+insightface>=0.7.3
+onnxruntime-gpu>=1.16.0
+
+# MediaPipe for gaze tracking
+mediapipe>=0.10.0
+
+# VLM for scene understanding (optional)
+transformers>=4.40.0
+accelerate>=0.25.0
+
+# Utilities
+python-dotenv>=1.0.0

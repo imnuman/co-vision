@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  covision:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - YOLO_MODEL=yolov8n
+      - FACE_MODEL=buffalo_l
+      - FACE_THRESHOLD=0.5
+      - VLM_MODEL=moondream2
+      - ENABLE_SCENE=true
+    volumes:
+      - ../models:/app/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped

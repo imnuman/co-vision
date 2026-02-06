@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CoVision - AI Companion</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: #16213e;
+            padding: 1rem;
+            text-align: center;
+            border-bottom: 1px solid #0f3460;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            color: #e94560;
+        }
+
+        .status {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+        }
+
+        .status-dot.connected { background: #4ade80; }
+        .status-dot.detected { background: #fbbf24; }
+        .status-dot.recognized { background: #e94560; }
+        .status-dot.looking { background: #3b82f6; }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            gap: 1rem;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #video, #canvas {
+            width: 100%;
+            display: block;
+        }
+
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+
+        .overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            padding: 1rem;
+        }
+
+        .detection-info {
+            font-size: 0.9rem;
+        }
+
+        .detection-info .label {
+            color: #e94560;
+            font-weight: 600;
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #d63d56;
+        }
+
+        button:disabled {
+            background: #444;
+            cursor: not-allowed;
+        }
+
+        button.secondary {
+            background: #0f3460;
+        }
+
+        button.secondary:hover {
+            background: #16213e;
+        }
+
+        .server-input {
+            display: flex;
+            gap: 0.5rem;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid #0f3460;
+            background: #16213e;
+            color: #eee;
+            font-size: 1rem;
+        }
+
+        .scene-description {
+            background: #16213e;
+            padding: 1rem;
+            border-radius: 8px;
+            max-width: 640px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .scene-description h3 {
+            color: #e94560;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .scene-description p {
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .events-log {
+            background: #16213e;
+            padding: 1rem;
+            border-radius: 8px;
+            max-width: 640px;
+            margin: 0 auto;
+            width: 100%;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .events-log h3 {
+            color: #e94560;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .event-item {
+            font-size: 0.85rem;
+            padding: 0.25rem 0;
+            border-bottom: 1px solid #0f3460;
+        }
+
+        .event-item:last-child {
+            border-bottom: none;
+        }
+
+        .event-time {
+            color: #666;
+            margin-right: 0.5rem;
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.2rem;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>CoVision</h1>
+        <div class="status">
+            <div class="status-item">
+                <div class="status-dot" id="statusConnection"></div>
+                <span>Server</span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot" id="statusDetected"></div>
+                <span>Person</span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot" id="statusRecognized"></div>
+                <span>Recognized</span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot" id="statusLooking"></div>
+                <span>Looking</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="server-input">
+            <input type="text" id="serverUrl" placeholder="RunPod Server URL (wss://...)"
+                   value="">
+            <button onclick="connect()" id="connectBtn">Connect</button>
+        </div>
+
+        <div class="video-container">
+            <video id="video" autoplay playsinline muted></video>
+            <canvas id="canvas"></canvas>
+            <div class="overlay">
+                <div class="detection-info">
+                    <span class="label" id="detectionLabel">Waiting for camera...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button onclick="startCamera()" id="startBtn">Start Camera</button>
+            <button onclick="stopCamera()" id="stopBtn" disabled>Stop</button>
+            <button onclick="describeScene()" id="sceneBtn" class="secondary" disabled>Describe Scene</button>
+        </div>
+
+        <div class="scene-description" id="sceneBox" style="display: none;">
+            <h3>Scene Description</h3>
+            <p id="sceneText">...</p>
+        </div>
+
+        <div class="events-log">
+            <h3>Events</h3>
+            <div id="eventsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        // Elements
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const serverUrlInput = document.getElementById('serverUrl');
+        const connectBtn = document.getElementById('connectBtn');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const sceneBtn = document.getElementById('sceneBtn');
+        const detectionLabel = document.getElementById('detectionLabel');
+        const sceneBox = document.getElementById('sceneBox');
+        const sceneText = document.getElementById('sceneText');
+        const eventsContainer = document.getElementById('eventsContainer');
+
+        // Status dots
+        const statusConnection = document.getElementById('statusConnection');
+        const statusDetected = document.getElementById('statusDetected');
+        const statusRecognized = document.getElementById('statusRecognized');
+        const statusLooking = document.getElementById('statusLooking');
+
+        // State
+        let ws = null;
+        let stream = null;
+        let sendInterval = null;
+        let isConnected = false;
+
+        // Connect to server
+        function connect() {
+            const url = serverUrlInput.value.trim();
+            if (!url) {
+                alert('Please enter the RunPod server URL');
+                return;
+            }
+
+            connectBtn.disabled = true;
+            connectBtn.textContent = 'Connecting...';
+
+            ws = new WebSocket(url);
+
+            ws.onopen = () => {
+                isConnected = true;
+                statusConnection.classList.add('connected');
+                connectBtn.textContent = 'Connected';
+                sceneBtn.disabled = false;
+                addEvent('Connected to server');
+            };
+
+            ws.onclose = () => {
+                isConnected = false;
+                statusConnection.classList.remove('connected');
+                connectBtn.disabled = false;
+                connectBtn.textContent = 'Connect';
+                sceneBtn.disabled = true;
+                addEvent('Disconnected from server');
+            };
+
+            ws.onerror = (err) => {
+                console.error('WebSocket error:', err);
+                addEvent('Connection error');
+            };
+
+            ws.onmessage = (event) => {
+                handleMessage(JSON.parse(event.data));
+            };
+        }
+
+        // Handle messages from server
+        function handleMessage(data) {
+            if (data.type === 'detection') {
+                updateDetection(data);
+            } else if (data.type === 'scene') {
+                sceneBox.style.display = 'block';
+                sceneText.textContent = data.description;
+            } else if (data.type === 'event') {
+                addEvent(data.message);
+
+                if (data.event === 'user_arrived') {
+                    statusRecognized.classList.add('recognized');
+                } else if (data.event === 'user_left') {
+                    statusRecognized.classList.remove('recognized');
+                    statusLooking.classList.remove('looking');
+                } else if (data.event === 'user_looking') {
+                    statusLooking.classList.add('looking');
+                }
+            }
+        }
+
+        // Update detection overlay
+        function updateDetection(data) {
+            // Update status dots
+            if (data.person_detected) {
+                statusDetected.classList.add('detected');
+            } else {
+                statusDetected.classList.remove('detected');
+                statusRecognized.classList.remove('recognized');
+                statusLooking.classList.remove('looking');
+            }
+
+            if (data.user_id) {
+                statusRecognized.classList.add('recognized');
+            }
+
+            if (data.is_looking) {
+                statusLooking.classList.add('looking');
+            } else {
+                statusLooking.classList.remove('looking');
+            }
+
+            // Update label
+            if (data.user_name) {
+                detectionLabel.textContent = `${data.user_name} (${(data.confidence * 100).toFixed(0)}%)`;
+                if (data.is_looking) {
+                    detectionLabel.textContent += ' - Looking at camera';
+                }
+            } else if (data.person_detected) {
+                detectionLabel.textContent = 'Person detected (not recognized)';
+            } else {
+                detectionLabel.textContent = 'No person detected';
+            }
+
+            // Draw bounding boxes
+            drawDetections(data.detections || []);
+        }
+
+        // Draw detection boxes on canvas
+        function drawDetections(detections) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (const det of detections) {
+                const [x1, y1, x2, y2] = det.bbox;
+
+                // Scale to canvas size
+                const scaleX = canvas.width / det.frame_width;
+                const scaleY = canvas.height / det.frame_height;
+
+                const x = x1 * scaleX;
+                const y = y1 * scaleY;
+                const w = (x2 - x1) * scaleX;
+                const h = (y2 - y1) * scaleY;
+
+                ctx.strokeStyle = det.recognized ? '#e94560' : '#fbbf24';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, w, h);
+
+                if (det.label) {
+                    ctx.fillStyle = det.recognized ? '#e94560' : '#fbbf24';
+                    ctx.font = '14px sans-serif';
+                    ctx.fillText(det.label, x, y - 5);
+                }
+            }
+        }
+
+        // Add event to log
+        function addEvent(message) {
+            const time = new Date().toLocaleTimeString();
+            const item = document.createElement('div');
+            item.className = 'event-item';
+            item.innerHTML = `<span class="event-time">${time}</span>${message}`;
+            eventsContainer.insertBefore(item, eventsContainer.firstChild);
+
+            // Keep only last 20 events
+            while (eventsContainer.children.length > 20) {
+                eventsContainer.removeChild(eventsContainer.lastChild);
+            }
+        }
+
+        // Start camera
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    },
+                    audio: false
+                });
+
+                video.srcObject = stream;
+                await video.play();
+
+                // Set canvas size
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                detectionLabel.textContent = 'Camera active';
+                addEvent('Camera started');
+
+                // Start sending frames
+                if (isConnected) {
+                    startSendingFrames();
+                }
+
+            } catch (err) {
+                console.error('Camera error:', err);
+                alert('Could not access camera: ' + err.message);
+            }
+        }
+
+        // Stop camera
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+
+            if (sendInterval) {
+                clearInterval(sendInterval);
+                sendInterval = null;
+            }
+
+            video.srcObject = null;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            detectionLabel.textContent = 'Camera stopped';
+            addEvent('Camera stopped');
+        }
+
+        // Send frames to server
+        function startSendingFrames() {
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+
+            // Send at ~10 FPS
+            sendInterval = setInterval(() => {
+                if (!stream || !ws || ws.readyState !== WebSocket.OPEN) {
+                    return;
+                }
+
+                tempCanvas.width = video.videoWidth;
+                tempCanvas.height = video.videoHeight;
+                tempCtx.drawImage(video, 0, 0);
+
+                // Convert to JPEG and send
+                tempCanvas.toBlob((blob) => {
+                    if (blob && ws.readyState === WebSocket.OPEN) {
+                        blob.arrayBuffer().then(buffer => {
+                            ws.send(buffer);
+                        });
+                    }
+                }, 'image/jpeg', 0.8);
+
+            }, 100); // 10 FPS
+        }
+
+        // Request scene description
+        function describeScene() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'describe_scene' }));
+                sceneText.textContent = 'Analyzing...';
+                sceneBox.style.display = 'block';
+            }
+        }
+
+        // Auto-start sending when connected after camera is on
+        const originalConnect = connect;
+        connect = function() {
+            originalConnect();
+            if (stream) {
+                setTimeout(() => {
+                    if (isConnected && stream) {
+                        startSendingFrames();
+                    }
+                }, 1000);
+            }
+        };
+    </script>
+</body>
+</html>

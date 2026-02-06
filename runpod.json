@@ -1,0 +1,17 @@
+{
+  "name": "covision-server",
+  "description": "CoVision - AI Companion Vision Server",
+  "dockerImage": "pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime",
+  "gpuType": "RTX 4090",
+  "gpuCount": 1,
+  "volumeSize": 20,
+  "ports": "8000/http",
+  "env": {
+    "YOLO_MODEL": "yolov8n",
+    "FACE_MODEL": "buffalo_l",
+    "FACE_THRESHOLD": "0.5",
+    "VLM_MODEL": "moondream2",
+    "ENABLE_SCENE": "true"
+  },
+  "startCommand": "cd /workspace && git clone https://github.com/imnuman/co-vision.git && cd co-vision && pip install -r requirements-server.txt && pip install -e . && python -m server.app"
+}

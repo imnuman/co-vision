@@ -47,23 +47,72 @@ Designed to integrate with [Feynman](https://github.com/imnuman/feynman) voice a
 | Camera Capture | OpenCV | Cross-platform webcam support |
 | Inference Runtime | ONNX Runtime | 43% faster than OpenCV DNN |
 
-## Installation
+## Web-Based Setup (Recommended)
+
+Use your phone or computer browser to capture video, with GPU inference on RunPod.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│   iPhone/Computer Browser  ──WebSocket──►  RunPod GPU Server │
+│   (Camera Capture)                         (Vision Inference) │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 1. Start RunPod Server
+
+1. Create a RunPod instance with GPU (RTX 3090/4090 recommended)
+2. SSH into your instance and run:
 
 ```bash
-# Clone repository
+# Quick start
+wget -qO- https://raw.githubusercontent.com/imnuman/co-vision/main/scripts/start_runpod.sh | bash
+```
+
+Or manually:
+
+```bash
+cd /workspace
 git clone https://github.com/imnuman/co-vision.git
 cd co-vision
-
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
+pip install -r requirements-server.txt
 pip install -e .
-
-# Download models (first run)
-python -m covision.download_models
+python -m server.app
 ```
+
+3. Note your RunPod proxy URL: `https://YOUR_POD_ID-8000.proxy.runpod.net`
+
+### 2. Open Web UI
+
+1. Open the URL in your browser (phone or desktop):
+   - `https://YOUR_POD_ID-8000.proxy.runpod.net/`
+
+2. Enter the WebSocket URL:
+   - `wss://YOUR_POD_ID-8000.proxy.runpod.net/ws`
+
+3. Click **Connect**, then **Start Camera**
+
+### 3. Enroll Your Face (Optional)
+
+To enable face recognition, enroll yourself on the RunPod server:
+
+```bash
+python scripts/enroll_user.py --name "Your Name"
+```
+
+Or via API:
+```bash
+# Upload photos to enroll
+curl -X POST https://YOUR_POD_ID-8000.proxy.runpod.net/enroll \
+  -F "name=Your Name" \
+  -F "photos=@photo1.jpg" \
+  -F "photos=@photo2.jpg"
+```
+
+---
+
+## Local Installation
+
+For local development or edge deployment:
 
 ## Quick Start
 
