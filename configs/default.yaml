@@ -1,0 +1,45 @@
+# CoVision Default Configuration
+
+camera:
+  device: 0              # Camera index or video file path
+  width: 1280            # Capture width
+  height: 720            # Capture height
+  fps: 30                # Target frame rate
+
+detection:
+  model: yolo26n         # Model: yolo26n, yolov8n, yolov10n
+  confidence: 0.5        # Detection confidence threshold
+  device: auto           # Device: auto, cuda, mps, cpu
+  classes: [0]           # COCO classes to detect (0 = person)
+
+recognition:
+  model: buffalo_l       # InsightFace model pack
+  threshold: 0.5         # Cosine similarity threshold for matching
+  embeddings_path: models/embeddings/
+  det_size: [640, 640]   # Face detection input size
+
+gaze:
+  enabled: true
+  attention_threshold: 0.3  # How centered iris must be to count as "looking"
+  smoothing_window: 5       # Frames to smooth gaze direction
+  min_detection_confidence: 0.5
+  min_tracking_confidence: 0.5
+
+scene:
+  enabled: true
+  model: moondream2      # VLM model for scene understanding
+  trigger: on_demand     # on_demand or periodic
+  interval: 5.0          # Seconds between periodic updates
+  max_tokens: 100        # Max tokens for scene description
+
+presence:
+  # Hysteresis to avoid flickering
+  arrival_frames: 3      # Frames user must be present before "arrived" event
+  departure_frames: 30   # Frames user must be absent before "left" event
+
+pipeline:
+  # Processing frequencies (1 = every frame, 2 = every other frame, etc.)
+  detection_interval: 1   # Person detection
+  face_interval: 3        # Face detection
+  recognition_interval: 6 # Face recognition
+  gaze_interval: 2        # Gaze tracking
