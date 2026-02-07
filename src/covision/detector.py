@@ -108,12 +108,13 @@ class PersonDetector:
             model: Model name (yolov8n, yolov8s, yolov10n, etc.)
             confidence: Detection confidence threshold
             device: Device (auto, cuda, mps, cpu)
-            classes: COCO class IDs to detect (default: [0] for person)
+            classes: COCO class IDs to detect (None = all 80 COCO classes)
         """
         self.model_name = model
         self.confidence = confidence
         self.device = device
-        self.classes = classes or [0]  # 0 = person
+        # None = detect all COCO classes, otherwise filter to specified classes
+        self.classes = classes  # Don't default to [0], allow None for all objects
 
         self._model = None
         self._loaded = False
