@@ -20,7 +20,8 @@
       "Bash(__NEW_LINE_baa749963241d6e1__ source /home/tomai/co-vision/.env)",
       "Bash(__NEW_LINE_7f9f3d7b08dda9b2__ ssh -o StrictHostKeyChecking=no -o ConnectTimeout=20 root@87.197.146.56 -p 40369 \"hostname && nvidia-smi --query-gpu=name,memory.total --format=csv,noheader\")",
       "Bash(__NEW_LINE_8f7ca555586d3b59__ source /home/tomai/co-vision/.env)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(gh auth status:*)"
     ]
   }
 }

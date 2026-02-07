@@ -105,13 +105,13 @@ async def startup():
     # Object detector (detects all COCO classes, not just persons)
     detector = PersonDetector(
         model=os.getenv("YOLO_MODEL", "yolov8n"),
-        confidence=0.5,
+        confidence=float(os.getenv("YOLO_CONFIDENCE", "0.3")),  # Lower threshold for more detections
         device="auto",
         classes=None,  # None = detect all 80 COCO classes
     )
     detector.load()
     detector.warmup()
-    logger.info("Person detector loaded")
+    logger.info(f"Object detector loaded (classes={detector.classes}, conf={detector.confidence})")
 
     # Face recognizer
     recognizer = FaceRecognizer(
@@ -373,10 +373,11 @@ async def process_frame(frame_bytes: bytes, session: SessionState) -> dict:
                     user_profile = recognizer.get_user(user_id)
                     user_name = user_profile.name if user_profile else user_id
 
-                    # Update detection with recognition info
+                    # Update only person detections with recognition info
                     for det in detections:
-                        det["recognized"] = True
-                        det["label"] = f"{user_name} ({confidence:.0%})"
+                        if det["class_id"] == 0:  # Only update person class
+                            det["recognized"] = True
+                            det["label"] = f"{user_name} ({confidence:.0%})"
 
     # Gaze tracking (every frame when person detected)
     if person_detected:
