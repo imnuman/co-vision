@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CoVision - AI Companion v2</title>
+    <title>CoVision v3</title>
     <style>
         * {
             box-sizing: border-box;
@@ -476,24 +476,28 @@
             }
 
             // Update label with more details
-            let label = '';
+            let parts = [];
             if (data.person_detected) {
-                label = 'Person detected';
-                if (data.face_detected) {
-                    label += ' | Face detected';
-                }
-                if (data.user_name) {
-                    label = `${data.user_name} (${(data.confidence * 100).toFixed(0)}%)`;
-                }
-                if (data.is_looking) {
-                    label += ' | Looking at camera';
-                } else if (data.attention_score > 0) {
-                    label += ` | Attention: ${(data.attention_score * 100).toFixed(0)}%`;
-                }
-            } else {
-                label = 'No person detected';
+                parts.push('Person');
             }
-            detectionLabel.textContent = label;
+            if (data.face_detected) {
+                parts.push('Face');
+            }
+            if (data.user_name) {
+                parts.push(`${data.user_name} (${(data.confidence * 100).toFixed(0)}%)`);
+            }
+            if (data.is_looking) {
+                parts.push('LOOKING AT CAMERA');
+            }
+            if (data.attention_score > 0.1) {
+                parts.push(`Attention: ${(data.attention_score * 100).toFixed(0)}%`);
+            }
+
+            if (parts.length > 0) {
+                detectionLabel.textContent = parts.join(' | ');
+            } else {
+                detectionLabel.textContent = 'No detection';
+            }
 
             // Draw bounding boxes
             drawDetections(data.detections || []);
