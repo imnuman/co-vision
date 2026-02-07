@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CoVision - AI Companion</title>
+    <title>CoVision - AI Companion v2</title>
     <style>
         * {
             box-sizing: border-box;
@@ -431,6 +431,10 @@
 
         // Handle messages from server
         function handleMessage(data) {
+            // Debug: log every 30th detection
+            if (data.type === 'detection' && data.frame_id % 30 === 0) {
+                console.log('Detection:', data);
+            }
             if (data.type === 'detection') {
                 updateDetection(data);
             } else if (data.type === 'scene') {
