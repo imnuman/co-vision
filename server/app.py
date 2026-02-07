@@ -355,8 +355,8 @@ async def process_frame(frame_bytes: bytes, session: SessionState) -> dict:
                 "frame_height": int(h),
             })
 
-    # Face recognition (every 3rd frame when person detected)
-    if person_detected and session.frame_count % 3 == 0:
+    # Face recognition (every frame when person detected for responsiveness)
+    if person_detected:
         rec_result = recognizer.detect(frame, session.frame_count)
 
         if rec_result.has_face:
@@ -373,11 +373,15 @@ async def process_frame(frame_bytes: bytes, session: SessionState) -> dict:
                         det["recognized"] = True
                         det["label"] = f"{user_name} ({confidence:.0%})"
 
-    # Gaze tracking (every 2nd frame)
-    if person_detected and session.frame_count % 2 == 0:
+    # Gaze tracking (every frame when person detected)
+    if person_detected:
         gaze_result = attention.track(frame, session.frame_count)
         is_looking = gaze_result.is_looking_at_camera
         attention_score = gaze_result.attention_score
+
+    # Debug logging every 30 frames
+    if session.frame_count % 30 == 0:
+        logger.info(f"Frame {session.frame_count}: person={person_detected}, face={face_detected}, looking={is_looking}, attention={attention_score:.2f}")
 
     # Update presence state
     session.presence.update(
