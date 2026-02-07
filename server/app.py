@@ -386,7 +386,8 @@ async def process_frame(frame_bytes: bytes, session: SessionState) -> dict:
 
     # Debug logging every 30 frames
     if session.frame_count % 30 == 0:
-        logger.info(f"Frame {session.frame_count}: person={person_detected}, face={face_detected}, looking={is_looking}, attention={attention_score:.2f}")
+        obj_names = [d["label"] for d in detections]
+        logger.info(f"Frame {session.frame_count}: objects={obj_names}, face={face_detected}, looking={is_looking}, attention={attention_score:.2f}")
 
     # Update presence state
     session.presence.update(
