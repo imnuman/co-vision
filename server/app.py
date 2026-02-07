@@ -238,13 +238,15 @@ async def process_frame(frame_bytes: bytes, session: SessionState) -> dict:
 
     if person_detected:
         for det in det_result.detections:
+            # Convert bbox to list of floats for JSON
+            bbox = [float(x) for x in det.bbox] if det.bbox else []
             detections.append({
-                "bbox": det.bbox,
-                "confidence": det.confidence,
+                "bbox": bbox,
+                "confidence": float(det.confidence),
                 "label": "Person",
                 "recognized": False,
-                "frame_width": w,
-                "frame_height": h,
+                "frame_width": int(w),
+                "frame_height": int(h),
             })
 
     # Face recognition (every 3rd frame when person detected)
@@ -279,15 +281,16 @@ async def process_frame(frame_bytes: bytes, session: SessionState) -> dict:
         attention_score=attention_score,
     )
 
+    # Convert numpy types to Python native types for JSON serialization
     return {
         "type": "detection",
-        "frame_id": session.frame_count,
-        "person_detected": person_detected,
+        "frame_id": int(session.frame_count),
+        "person_detected": bool(person_detected),
         "user_id": user_id,
         "user_name": user_name,
-        "confidence": confidence,
-        "is_looking": is_looking,
-        "attention_score": attention_score,
+        "confidence": float(confidence),
+        "is_looking": bool(is_looking),
+        "attention_score": float(attention_score),
         "detections": detections,
     }
 
