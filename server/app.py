@@ -14,15 +14,16 @@ import json
 import logging
 import os
 import time
-from typing import Optional
+from typing import Optional, List
 
 import cv2
 import numpy as np
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Form, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
+from pydantic import BaseModel
 
 # Import CoVision components
 from covision.detector import PersonDetector
@@ -157,6 +158,110 @@ async def health():
         "attention": attention is not None,
         "scene": scene_analyzer is not None,
     }
+
+
+class EnrollmentRequest(BaseModel):
+    """Request body for enrollment."""
+    name: str
+    user_id: Optional[str] = None
+    frames: List[str]  # Base64-encoded JPEG images
+
+
+@app.post("/enroll")
+async def enroll_user(request: EnrollmentRequest):
+    """Enroll a user's face for recognition.
+
+    Receives multiple face images and creates embeddings for recognition.
+    """
+    global recognizer
+
+    if recognizer is None:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "Face recognizer not initialized"}
+        )
+
+    name = request.name.strip()
+    user_id = request.user_id or name.lower().replace(" ", "_")
+
+    if not name:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Name is required"}
+        )
+
+    if len(request.frames) < 3:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "At least 3 face images required"}
+        )
+
+    # Decode frames
+    frames = []
+    for i, frame_b64 in enumerate(request.frames):
+        try:
+            # Remove data URL prefix if present
+            if "," in frame_b64:
+                frame_b64 = frame_b64.split(",")[1]
+
+            frame_bytes = base64.b64decode(frame_b64)
+            nparr = np.frombuffer(frame_bytes, np.uint8)
+            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+            if frame is not None:
+                frames.append(frame)
+        except Exception as e:
+            logger.warning(f"Failed to decode frame {i}: {e}")
+
+    if len(frames) < 3:
+        return JSONResponse(
+            status_code=400,
+            content={"error": f"Only {len(frames)} valid frames decoded, need at least 3"}
+        )
+
+    logger.info(f"Enrolling user '{name}' (ID: {user_id}) with {len(frames)} frames")
+
+    # Run enrollment in thread pool
+    loop = asyncio.get_event_loop()
+    success = await loop.run_in_executor(
+        None,
+        recognizer.enroll,
+        user_id,
+        name,
+        frames,
+    )
+
+    if success:
+        logger.info(f"Successfully enrolled user '{name}'")
+        return {
+            "status": "success",
+            "user_id": user_id,
+            "name": name,
+            "frames_used": len(frames),
+        }
+    else:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Enrollment failed - could not detect face in images"}
+        )
+
+
+@app.get("/users")
+async def list_users():
+    """List enrolled users."""
+    global recognizer
+
+    if recognizer is None:
+        return {"users": []}
+
+    users = []
+    for user_id, profile in recognizer._users.items():
+        users.append({
+            "user_id": user_id,
+            "name": profile.name,
+        })
+
+    return {"users": users}
 
 
 @app.websocket("/ws")

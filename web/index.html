@@ -210,6 +210,71 @@
             margin-right: 0.5rem;
         }
 
+        .enrollment-section {
+            background: #16213e;
+            padding: 1rem;
+            border-radius: 8px;
+            max-width: 640px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .enrollment-section h3 {
+            color: #e94560;
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .enrollment-form {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .enrollment-form input {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .enrollment-progress {
+            margin-top: 0.75rem;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #0f3460;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #e94560;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .progress-text {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-top: 0.5rem;
+        }
+
+        .enrolled-users {
+            margin-top: 0.75rem;
+            font-size: 0.85rem;
+        }
+
+        .enrolled-users span {
+            background: #0f3460;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            margin-right: 0.5rem;
+            display: inline-block;
+            margin-bottom: 0.25rem;
+        }
+
         @media (max-width: 480px) {
             .header h1 {
                 font-size: 1.2rem;
@@ -269,6 +334,21 @@
             <button onclick="startCamera()" id="startBtn">Start Camera</button>
             <button onclick="stopCamera()" id="stopBtn" disabled>Stop</button>
             <button onclick="describeScene()" id="sceneBtn" class="secondary" disabled>Describe Scene</button>
+        </div>
+
+        <div class="enrollment-section">
+            <h3>Face Enrollment</h3>
+            <div class="enrollment-form">
+                <input type="text" id="enrollName" placeholder="Your name">
+                <button onclick="startEnrollment()" id="enrollBtn" class="secondary">Enroll Face</button>
+            </div>
+            <div class="enrollment-progress" id="enrollProgress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">Capturing...</div>
+            </div>
+            <div class="enrolled-users" id="enrolledUsers"></div>
         </div>
 
         <div class="scene-description" id="sceneBox" style="display: none;">
@@ -553,6 +633,120 @@
                 }, 1000);
             }
         };
+
+        // Enrollment elements
+        const enrollNameInput = document.getElementById('enrollName');
+        const enrollBtn = document.getElementById('enrollBtn');
+        const enrollProgress = document.getElementById('enrollProgress');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const enrolledUsers = document.getElementById('enrolledUsers');
+
+        // Start face enrollment
+        async function startEnrollment() {
+            const name = enrollNameInput.value.trim();
+            if (!name) {
+                alert('Please enter your name');
+                return;
+            }
+
+            if (!stream) {
+                alert('Please start the camera first');
+                return;
+            }
+
+            enrollBtn.disabled = true;
+            enrollProgress.style.display = 'block';
+            progressFill.style.width = '0%';
+            progressText.textContent = 'Look at the camera and move your head slightly...';
+
+            const frames = [];
+            const totalFrames = 10;
+            const captureInterval = 300; // ms between captures
+
+            // Capture frames
+            for (let i = 0; i < totalFrames; i++) {
+                await new Promise(resolve => setTimeout(resolve, captureInterval));
+
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = video.videoWidth;
+                tempCanvas.height = video.videoHeight;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(video, 0, 0);
+
+                const dataUrl = tempCanvas.toDataURL('image/jpeg', 0.9);
+                frames.push(dataUrl);
+
+                const progress = ((i + 1) / totalFrames) * 100;
+                progressFill.style.width = progress + '%';
+                progressText.textContent = `Capturing... ${i + 1}/${totalFrames}`;
+            }
+
+            progressText.textContent = 'Processing...';
+
+            // Get base URL from WebSocket URL
+            const wsUrl = serverUrlInput.value.trim();
+            const baseUrl = wsUrl.replace('wss://', 'https://').replace('ws://', 'http://').replace('/ws', '');
+
+            try {
+                const response = await fetch(baseUrl + '/enroll', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        frames: frames,
+                    }),
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    progressText.textContent = `Enrolled successfully as "${result.name}"!`;
+                    progressFill.style.width = '100%';
+                    addEvent(`Enrolled: ${result.name}`);
+                    enrollNameInput.value = '';
+                    loadEnrolledUsers();
+                } else {
+                    progressText.textContent = `Error: ${result.error}`;
+                    progressFill.style.width = '0%';
+                }
+            } catch (err) {
+                progressText.textContent = `Error: ${err.message}`;
+                progressFill.style.width = '0%';
+            }
+
+            enrollBtn.disabled = false;
+        }
+
+        // Load enrolled users list
+        async function loadEnrolledUsers() {
+            const wsUrl = serverUrlInput.value.trim();
+            if (!wsUrl) return;
+
+            const baseUrl = wsUrl.replace('wss://', 'https://').replace('ws://', 'http://').replace('/ws', '');
+
+            try {
+                const response = await fetch(baseUrl + '/users');
+                const result = await response.json();
+
+                if (result.users && result.users.length > 0) {
+                    enrolledUsers.innerHTML = '<strong>Enrolled:</strong> ' +
+                        result.users.map(u => `<span>${u.name}</span>`).join('');
+                } else {
+                    enrolledUsers.innerHTML = '<em>No users enrolled yet</em>';
+                }
+            } catch (err) {
+                console.error('Failed to load users:', err);
+            }
+        }
+
+        // Load users when connected
+        const originalWsOnOpen = null;
+        serverUrlInput.addEventListener('change', () => {
+            setTimeout(loadEnrolledUsers, 500);
+        });
     </script>
 </body>
 </html>
