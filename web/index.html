@@ -471,17 +471,25 @@
                 statusLooking.classList.remove('looking');
             }
 
-            // Update label
-            if (data.user_name) {
-                detectionLabel.textContent = `${data.user_name} (${(data.confidence * 100).toFixed(0)}%)`;
-                if (data.is_looking) {
-                    detectionLabel.textContent += ' - Looking at camera';
+            // Update label with more details
+            let label = '';
+            if (data.person_detected) {
+                label = 'Person detected';
+                if (data.face_detected) {
+                    label += ' | Face detected';
                 }
-            } else if (data.person_detected) {
-                detectionLabel.textContent = 'Person detected (not recognized)';
+                if (data.user_name) {
+                    label = `${data.user_name} (${(data.confidence * 100).toFixed(0)}%)`;
+                }
+                if (data.is_looking) {
+                    label += ' | Looking at camera';
+                } else if (data.attention_score > 0) {
+                    label += ` | Attention: ${(data.attention_score * 100).toFixed(0)}%`;
+                }
             } else {
-                detectionLabel.textContent = 'No person detected';
+                label = 'No person detected';
             }
+            detectionLabel.textContent = label;
 
             // Draw bounding boxes
             drawDetections(data.detections || []);

@@ -330,6 +330,7 @@ async def process_frame(frame_bytes: bytes, session: SessionState) -> dict:
 
     # Run detection pipeline
     person_detected = False
+    face_detected = False
     user_id = None
     user_name = None
     confidence = 0.0
@@ -359,6 +360,7 @@ async def process_frame(frame_bytes: bytes, session: SessionState) -> dict:
         rec_result = recognizer.detect(frame, session.frame_count)
 
         if rec_result.has_face:
+            face_detected = True
             largest = rec_result.get_largest()
             if largest:
                 user_id, confidence = recognizer.identify(largest)
@@ -391,6 +393,7 @@ async def process_frame(frame_bytes: bytes, session: SessionState) -> dict:
         "type": "detection",
         "frame_id": int(session.frame_count),
         "person_detected": bool(person_detected),
+        "face_detected": bool(face_detected),
         "user_id": user_id,
         "user_name": user_name,
         "confidence": float(confidence),
