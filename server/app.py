@@ -102,11 +102,12 @@ async def startup():
 
     logger.info("Initializing CoVision models...")
 
-    # Person detector
+    # Object detector (detects all COCO classes, not just persons)
     detector = PersonDetector(
         model=os.getenv("YOLO_MODEL", "yolov8n"),
         confidence=0.5,
         device="auto",
+        classes=None,  # None = detect all 80 COCO classes
     )
     detector.load()
     detector.warmup()
@@ -342,18 +343,22 @@ async def process_frame(frame_bytes: bytes, session: SessionState) -> dict:
     det_result = detector.detect(frame, session.frame_count)
     person_detected = det_result.has_person
 
-    if person_detected:
-        for det in det_result.detections:
-            # Convert bbox to list of floats for JSON
-            bbox = [float(x) for x in det.bbox] if det.bbox else []
-            detections.append({
-                "bbox": bbox,
-                "confidence": float(det.confidence),
-                "label": "Person",
-                "recognized": False,
-                "frame_width": int(w),
-                "frame_height": int(h),
-            })
+    # Add all detected objects
+    for det in det_result.detections:
+        # Convert bbox to list of floats for JSON
+        bbox = [float(x) for x in det.bbox] if det.bbox else []
+        detections.append({
+            "bbox": bbox,
+            "confidence": float(det.confidence),
+            "label": det.class_name.capitalize(),
+            "class_id": det.class_id,
+            "recognized": False,
+            "frame_width": int(w),
+            "frame_height": int(h),
+        })
+        # Check if any person detected
+        if det.class_id == 0:
+            person_detected = True
 
     # Face recognition (every frame when person detected for responsiveness)
     if person_detected:
@@ -392,6 +397,9 @@ async def process_frame(frame_bytes: bytes, session: SessionState) -> dict:
         attention_score=attention_score,
     )
 
+    # Get unique object labels for display
+    object_labels = list(set(d["label"] for d in detections))
+
     # Convert numpy types to Python native types for JSON serialization
     return {
         "type": "detection",
@@ -404,6 +412,7 @@ async def process_frame(frame_bytes: bytes, session: SessionState) -> dict:
         "is_looking": bool(is_looking),
         "attention_score": float(attention_score),
         "detections": detections,
+        "objects": object_labels,  # List of detected object types
     }
 
 

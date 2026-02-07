@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CoVision v3</title>
+    <title>CoVision v4</title>
     <style>
         * {
             box-sizing: border-box;
@@ -475,22 +475,28 @@
                 statusLooking.classList.remove('looking');
             }
 
-            // Update label with more details
+            // Update label with detected objects
             let parts = [];
-            if (data.person_detected) {
-                parts.push('Person');
+
+            // Show all detected objects
+            if (data.objects && data.objects.length > 0) {
+                parts.push(data.objects.join(', '));
             }
+
+            // Face detection info
             if (data.face_detected) {
-                parts.push('Face');
+                if (data.user_name) {
+                    parts.push(`${data.user_name} (${(data.confidence * 100).toFixed(0)}%)`);
+                } else {
+                    parts.push('Face');
+                }
             }
-            if (data.user_name) {
-                parts.push(`${data.user_name} (${(data.confidence * 100).toFixed(0)}%)`);
-            }
+
+            // Gaze info
             if (data.is_looking) {
-                parts.push('LOOKING AT CAMERA');
-            }
-            if (data.attention_score > 0.1) {
-                parts.push(`Attention: ${(data.attention_score * 100).toFixed(0)}%`);
+                parts.push('LOOKING');
+            } else if (data.attention_score > 0.1) {
+                parts.push(`Attn: ${(data.attention_score * 100).toFixed(0)}%`);
             }
 
             if (parts.length > 0) {

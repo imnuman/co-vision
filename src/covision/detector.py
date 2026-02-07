@@ -187,12 +187,14 @@ class PersonDetector:
                 conf = float(boxes.conf[i].cpu().numpy())
                 cls = int(boxes.cls[i].cpu().numpy())
 
+                # Get class name from model
+                class_name = self._model.names.get(cls, f"class_{cls}")
                 detections.append(
                     Detection(
                         bbox=(int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])),
                         confidence=conf,
                         class_id=cls,
-                        class_name="person" if cls == 0 else f"class_{cls}",
+                        class_name=class_name,
                     )
                 )
 

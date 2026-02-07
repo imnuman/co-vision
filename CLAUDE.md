@@ -196,3 +196,48 @@ python -m covision.benchmark --iterations 100
 2. Emit from relevant component
 3. Document in README.md
 4. Add handler example in `integrations/feynman.py`
+
+## Web-Based Architecture (RunPod)
+
+For browser-based access (phone/desktop), use the WebSocket server:
+
+```
+Browser (Phone/Desktop)  ──WebSocket──►  RunPod GPU Server
+   - Camera capture                        - YOLO detection
+   - Sends JPEG frames                     - Face recognition
+   - Displays results                      - Gaze tracking
+                                          - Scene understanding
+```
+
+### Server Components
+
+- **server/app.py** - FastAPI WebSocket server
+- **web/index.html** - Browser UI with camera capture
+
+### Run on RunPod
+
+```bash
+# Quick start on RunPod
+wget -qO- https://raw.githubusercontent.com/imnuman/co-vision/main/scripts/start_runpod.sh | bash
+
+# Or manually
+pip install -r requirements-server.txt
+pip install -e .
+python -m server.app
+```
+
+### Access URLs
+
+- Web UI: `https://YOUR_POD_ID-8000.proxy.runpod.net/`
+- WebSocket: `wss://YOUR_POD_ID-8000.proxy.runpod.net/ws`
+
+## Related Projects
+
+- **Feynman** (`/home/tomai/feynman`) - Voice assistant to integrate with
+- **everything-claude-code** (`/home/tomai/everything-claude-code`) - Claude Code configs (reference only)
+
+## Project Boundaries
+
+This is the **co-vision** project. Do not modify files in:
+- `/home/tomai/feynman/` (separate voice assistant project)
+- `/home/tomai/everything-claude-code/` (reference configs only)
